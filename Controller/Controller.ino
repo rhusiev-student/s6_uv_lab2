@@ -4,7 +4,7 @@
 
 const uint8_t single_delay = 2;
 const uint8_t move_delays = 20 / single_delay;
-const uint8_t update_delays = 150 / single_delay;
+const uint8_t update_delays = 50 / single_delay;
 const uint8_t servo_delays_initial = 4 / single_delay;
 uint8_t servo_delays_hor = servo_delays_initial;
 uint8_t servo_delays_ver = servo_delays_initial;
@@ -34,33 +34,46 @@ void dumpGamepad(ControllerPtr ctl) {
 }
 
 const int32_t controller_max_cube = controller_max * controller_max * controller_max;
-const int32_t half_motor_max = 2000;
+const int32_t motor_max = 2000;
 const int32_t motor_min = 600;
 const int32_t motor_start_movement = 200;
 
-int32_t to_motor_speed(int32_t speed) {
-  speed = speed * speed * speed;
-  auto motor_speed = (half_motor_max - motor_min) * speed / controller_max_cube;
+int32_t to_motor_speed_cube(int32_t speed) {
+  auto motor_speed = (motor_max - motor_min) * speed / controller_max * speed / controller_max * speed / controller_max;
   if (motor_speed > motor_start_movement) {
     motor_speed += motor_min;
   } else if (motor_speed < -motor_start_movement) {
     motor_speed -= motor_min;
   }
+  return motor_speed;
+}
+int32_t to_motor_speed(int32_t speed) {
+  auto motor_speed = (motor_max - motor_min - 600) * speed / controller_max;
+  if (motor_speed > motor_start_movement) {
+    motor_speed += motor_min + 600;
+  } else if (motor_speed < -motor_start_movement) {
+    motor_speed -= motor_min + 600;
+  }
+  return motor_speed;
 }
 
 void move_frame(ControllerPtr ctl) {
-  auto forward = to_motor_speed(-ctl->axisY());
+  auto forward = to_motor_speed_cube(-ctl->axisY());
   auto left = to_motor_speed(ctl->axisX());
 
   int movement[4];
-  movement[0] = left;
-  movement[1] = left;
-  movement[2] = -left;
-  movement[3] = -left;
-  movement[0] += forward;
-  movement[1] += forward;
-  movement[2] += forward;
-  movement[3] += forward;
+  int32_t right;
+  if (left > 0) {
+    right = -left / 4;
+    left = left * 3 / 4;
+  } else {
+    right = -left * 3 / 4;
+    left = left / 4;
+  }
+  movement[0] += forward + left;
+  movement[1] += forward + left;
+  movement[2] += forward + right;
+  movement[3] += forward + right;
   Motor_Move(movement[0], movement[1], movement[2], movement[3]);
   // Serial.printf("Motor: %d %d %d %d (forward %d left %d)\n", movement[0], movement[1], movement[2], movement[3], forward, left);
 }
@@ -183,7 +196,6 @@ void loop() {
     // Serial.printf("Servo: %d %d\n", angle_horizontal, angle_vertical);
   }
   if (!dataUpdated) {
-    reset();
     return;
   }
   if (!(myController && myController->isConnected() && myController->hasData())) {
