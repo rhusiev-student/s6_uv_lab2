@@ -1,7 +1,9 @@
 #include "gamepad.hpp"
+#include "motor.hpp"
 
 ControllerPtr myController;
-uint8_t myControllerAddr[6] = {0x83, 0x45, 0x66, 0x66, 0x3d, 0xc8}; // {130, 69, 102, 102, 61, 200}
+uint8_t myControllerAddr[6] = {0xA0, 0x5A, 0x5E, 0x3B, 0x56, 0x00};
+//{0x83, 0x45, 0x66, 0x66, 0x3d, 0xc8};
 
 // This callback gets called any time a new gamepad is connected.
 void onConnectedController(ControllerPtr ctl) {
@@ -17,6 +19,17 @@ void onConnectedController(ControllerPtr ctl) {
   }
   Serial.printf("Controller model: %s, VID=0x%04x, PID=0x%04x", ctl->getModelName().c_str(), properties.vendor_id,
                   properties.product_id);
+  ledcWrite(BUZZER_CHN, 580);
+  delay(30);
+  ledcWrite(BUZZER_CHN, 600);
+  delay(50);
+  ledcWrite(BUZZER_CHN, 580);
+  delay(30);
+  ledcWrite(BUZZER_CHN, 560);
+  delay(20);
+  ledcWrite(BUZZER_CHN, 540);
+  delay(15);
+  ledcWrite(BUZZER_CHN, 0);
   myController = ctl;
 }
 
